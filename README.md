@@ -23,9 +23,15 @@ choice belonging to whoever owns the format.
 
 NVIDIA's RTX Spark, disclosed August 2026, is the same argument from the other
 side: a 3 nm part with a petaflop of compute, 128 GB of unified memory, and
-**256 bits** — half the bus of an Apple laptop chip two years older. The
-envelope this project targets is now something you can buy; the width is still
-on the table. `docs/blueprint.md` §1 says what that leaves.
+**256 bits** — half the bus of an Apple laptop chip two years older.
+
+Which carries a consequence this project was slow to draw. If bandwidth is
+bought with pins, **nobody holds a position on bandwidth, including us**. The
+envelope commoditises — $1,000–1,500 for 128 GB at 300+ GB/s by about 2028 is
+the conservative reading — and a chip program started now delivers parts in
+2029–30, after the curve arrives. So the hardware is assumed to get cheap, and
+what is built here is the layer that does not commoditise: the residency
+model, and an operating system made of models. `docs/blueprint.md` §1.
 
 Groq's first-generation LPU is the existence proof for the silicon half: a
 competitive inference chip on GlobalFoundries 14 nm, winning on memory
@@ -52,16 +58,22 @@ Design-stage. Three cost and feasibility models, no RTL, no board.
   LPDDR side. `docs/decisions.md`, Reversed.
 - **Amortised NRE crosses the BOM at ~87,000 units** (~$40M program). Below that
   the chip's development cost exceeds every physical part in the machine
-  combined. This, not any bandwidth number, decides whether silicon happens.
+  combined. This, not any bandwidth number, decides whether silicon happens —
+  and against a commodity curve that reaches the same envelope first, the
+  current answer is that it does not. The chip is an option the plan defers,
+  not a destination it works toward.
 
 **What is not yet known** — in the order that can kill the design:
 
-1. Whether a purpose-designed representation beats `Q4_K_M` at iso-perplexity.
-   If not, there is no ratio to justify a chip. `experiments/README.md` E1.
-2. Whether a DDR5/LPDDR5 PHY is licensable at 28 nm. The mixed-signal PHY, not
-   the logic, is what gates a mature-node design — and an LPDDR5X-8533 PHY, at
-   any node, for the portable variant.
-3. Volume — now to be sold against an RTX Spark on six OEMs' shelves.
+1. Whether one-representation-end-to-end beats convert-and-materialise on the
+   same machine: cold start, model and expert swap, resident footprint. Since
+   the bandwidth term commoditises and E1 measured only 4.5% of headroom in the
+   bytes-per-token term, **residency is what the format is worth**, and this is
+   now the load-bearing experiment. `docs/simulation.md` S7.
+2. Whether a model can be an operating system — carrying an ordinary day of
+   work by voice, safely, at these token rates. `os/`, S9.
+3. Whether any market condition justifies silicon before the commodity curve
+   arrives. Currently none does.
 
 ## Layout
 
@@ -101,12 +113,16 @@ The representation for this system has to be designed as one. See E1.
 
 ## The honest summary
 
-The physics is right and the parts are cheap. The machine is gated on one
-experiment and one number: whether a designed representation beats `Q4_K_M` at
-equal quality, and whether anything here ever ships 87,000 units. NVIDIA has
-since shipped the envelope — 128 GB at ~300 GB/s, on 256 bits — which settles
-the premise and takes the market for it in the same move, and leaves width,
-capacity and the operating system as the things left to be better at. Until
-the first question is answered, the correct move is unchanged and now cheaper
-to justify: E2 — prove the architecture in software on a board someone else
-already built, and measure theirs while you are there.
+The physics is right and the parts are cheap — and getting cheaper for
+everyone, which is the whole point. The premise says bandwidth is bought with
+pins; the honest consequence is that the bandwidth cannot be owned, so the
+machine was never the product. What is left is what the machine was always in
+service of: weights that are never materialised, models that are resident and
+swap at page granularity, and an OS made of models rather than one that hosts
+them. That runs on hardware other people are racing to make cheap.
+
+The chip stays in the plan as an option with its conditions written down, in
+case a representation or a residency result turns up that a commodity host
+cannot reach. Until then the correct move is E2 — prove the architecture in
+software on hardware someone else already built — and it is now the *whole*
+move, not a step toward a tapeout.

@@ -16,8 +16,13 @@ what the representation campaign returns. Revised 2026-08-17 to add the
 the model is the OS, and the appliance loses Linux with it — and, later the
 same day, to make it voice-first with a fixed touch/key set and models in
 charge of apps and settings (`os/`). Revised again after NVIDIA disclosed
-**RTX Spark**: §1 now says where this sits in a field that has an incumbent,
-and adds **YFCE-M**, the portable variant on socketed LPDDR5X modules.
+**RTX Spark**, and then re-footed: §1 no longer treats that as an event but as
+the first arrival on a commodity curve, which is a different plan. The
+hardware envelope is assumed to commoditise; **Fork C — the stack on hosts
+somebody else builds — is the base case**, and silicon is an option this
+document defers rather than a destination it works toward. **YFCE-M**, the
+portable variant on socketed LPDDR5X modules, is described the same way: a
+target envelope, not a committed board.
 
     docs/simulation.md   the PC-side campaign, stage by stage (S0–S10)
     docs/architecture.md the design and its invariant — this document assumes it
@@ -27,6 +32,10 @@ and adds **YFCE-M**, the portable variant on socketed LPDDR5X modules.
 
 One machine whose one job is batch-1 decoding of a large model that stays
 resident, in three variants that share a runtime, a format and an SoC family.
+Read them as **target envelopes first and boards second**: each says what the
+software should assume about memory, and each can be met either by hardware
+somebody else sells (the base case, §6 Fork C) or by building it (an option,
+gated).
 **YFCE-1** is the headless appliance: mains-powered, socketed DDR5, serves
 models over the network. **YFCE-P** is the AI PC: the same board with a
 microphone array, speakers, a glanceable touch display and a camera —
@@ -63,7 +72,7 @@ The machine is *not* a prefill engine, not a training box, and not a phone.
 Time-to-first-token on long inputs will be visibly worse than a leading-edge
 SoC and the positioning has to say so; §3 says what the AI PC does about it.
 
-### Where this sits — the field, August 2026
+### The envelope is a commodity — what that leaves
 
 NVIDIA disclosed **RTX Spark** (N1X) this month: 20 Grace ARM cores and a
 6,144-core Blackwell GPU on TSMC 3 nm, up to 128 GB of soldered unified
@@ -86,79 +95,79 @@ wrong. Only Strix Halo's number is measured.
 | **YFCE-1** | 28 nm | 512-bit | 128 GB DDR5-5600, **DIMMs** | 358 | 301 | 67 | 107 | ~20 TOPS | BOM $462–1,422 |
 | **YFCE-M** | 28 nm / 16 nm? | 512-bit | 256 GB LPDDR5X-8533, **LPCAMM2** | 546 | 459 | 102 | 164 | ~20 TOPS | BOM ~$2,010 |
 
-Six things follow, and two of them are unwelcome.
+**The premise implies its own commoditisation, and this document was slow to
+say so.** If bandwidth is bought with pins rather than lithography — and a
+3 nm part choosing 256 bits is evidence that it is — then nobody holds a
+position on bandwidth, *this project included*. Spark is not an event that
+took the envelope away. It is the first arrival on a curve that was always
+going to arrive, and the curve is the thing to plan against.
 
-**1. The premise is now mainstream, and the envelope stops being a claim.**
-"128 GB running a 120B model locally" is a thing anyone can buy this autumn
-from six OEMs, at 3 nm, with a petaflop attached. Whether YFCE-1 is
-*slightly* ahead of Spark on decode (301 achieved against ~252–258, if both
-derate alike) or level with it (301 against NVIDIA's quoted 300, comparing a
-derated estimate to a peak, which is the error this project keeps warning
-about) is not worth arguing on paper — it is one afternoon's measurement on
-a machine that exists, and §8's T1 should now buy one. Either way the honest
-statement is: **same class, same envelope**. What this project can no longer
-claim is *speed at 128 GB*.
+**The curve.** Strix Halo in 2025: 256-bit, 215 GB/s measured, $1,500–2,600.
+DGX Spark: 273 GB/s at $4,699. RTX Spark now: ~300 GB/s at ~$2,899, in
+laptops and desktops, from six OEMs. Behind them, LPCAMM2 is putting wide
+LPDDR into upgradeable modules across the whole PC industry — Intel has
+demoed Panther Lake at 9600 MT/s — Apple has shipped 512 bits since 2023, and
+AMD, Qualcomm and MediaTek all have to answer Spark. The DRAM spike is
+cyclical and will unwind. **128 GB at 300+ GB/s for $1,000–1,500 by 2028 is a
+conservative reading of that list, not a bold one.**
 
-**2. NVIDIA stopped at 256 bits, and that is the whole opening.** A 3 nm part
-announced in 2026 has half the bus of an M4 Max from 2024. The premise this
-design rests on — bandwidth is width, and width is not a lithography
-variable — is not only intact, it is the thing the leading-edge entrant left
-on the table. Four LPCAMM2 modules is 512 bits: **459 GB/s** at LPDDR5X-8533
-and 516 at 9600, which is 1.5–1.7× Spark, from a socketed, mature-node board.
+**Which closes the silicon question on arithmetic, before any gate does.**
+`model/bom.py` budgets ~40 engineers for 2.5 years. Add the campaign
+(4–7 months), a test chip (6–9 months), bring-up and one respin: **parts in
+2029–2030.** That is a program racing a cost curve which arrives first, and
+the machine is mostly DRAM either way, so the mature-node die saving — $5
+against maybe $150 — shrinks to a rounding error exactly as the envelope
+commoditises. The chip does not lose to Spark. It loses to the calendar.
+This is a fourth reason, independent of G1, G2 and G5, and it is the
+cleanest of the four.
 
-**3. Capacity is the other thing solder cannot do.** 128 GB is Spark's
-ceiling, in every configuration, forever. A 235B-A22B MoE needs 132 GB
-resident and does not fit at any price; on 12 channels of DDR5 or four
-LPCAMM2 modules it does, at 37 tok/s. This is the same argument as §3's
-"the kernel wants to be a MoE", and it now has a competitor-shaped edge on it.
+**What is perishable, and what is not.** The distinction the rest of this
+document now hangs on:
 
-**4. Compute is where it loses, and the gap is 50×.** 1 PFLOP against
-~20 TOPS. A 4k-token document into a dense 70B: **0.57 s on Spark, 28.7 s
-here**. Choosing a MoE kernel takes the absolute number to 2.05 s, which is
-usable, but the ratio does not move. Prefill was already the known weak
-flank (`architecture.md`); it now has a name and a price.
+| | | |
+|---|---|---|
+| **perishable** | bandwidth | anyone can buy pins; that is the premise |
+| | capacity | density and module counts follow, one generation behind |
+| | the mature-node die saving | a rounding error on a machine that is mostly DRAM, and it shrinks as hosts get cheaper |
+| | width past 256 bits, capacity past 128 GB | the same commodity, one generation later — these were offered here as durable advantages two revisions ago, and they are not |
+| **durable** | **residency** — one representation from flash to DRAM to the MAC units, page-granular, no conversion anywhere | a property of software, so it runs on anyone's hardware, and it gets *cheaper to deliver* as hosts get cheaper |
+| | **the operating system** (`os/`) | no hardware roadmap produces it |
 
-**5. "Cheaper" is real but it is not a multiple — today.** Both machines are
-mostly DRAM, and DRAM is priced by the same market. The non-memory
-difference is roughly a $5 die at 28 nm against a large 3 nm SoC, plus
-NVIDIA's and an OEM's margin: perhaps $250–400 of BOM, $500–800 at retail.
-Call it **$2,000–2,300 against $2,899 at equal memory** — 20–30%, not 3×.
-The multiple exists in exactly two places: **after the DRAM spike**, where a
-$462 BOM against a Spark-class machine is 3–5×; and **at capacities Spark
-cannot reach**, where the comparison is per GB rather than per machine. A
-portable that is 25% cheaper than an RTX Spark laptop is not a business;
-one that holds 256 GB when the alternative holds 128 GB might be.
+**Read the roofline again with that in mind.** `tokens/s = bandwidth ÷ bytes
+per token`. Commoditisation hands the numerator to everyone. The denominator
+is the half this project owns — and E1 measured its headroom at 4.5% against
+`Q4_K_M`, which is not a moat either. So what the format is worth is **not
+ratio, it is residency**: cold start, model and expert swap, resident
+footprint, and no conversion between the bytes on flash and the bytes the
+matrix units consume. That is G4, measured in S7, and it moves from a
+supporting experiment to the load-bearing one.
 
-**6. Volume (G5) just got harder, and G5 was already the deciding number.**
-The crossover is ~87k units at pre-spike DRAM and ~28k at $10/GB. Those
-units now have to be sold against NVIDIA with six OEMs and Windows. Nothing
-in the physics changed; the distribution question got worse, and it was
-always the one that decides whether silicon happens.
+**Cheap hosts are the enabling condition, not the threat.** Every $1,200
+128 GB box that ships is a machine this stack can run on and did not have to
+build, fund or sell. A software layer that needs cheap wide memory to exist
+at all should want that hardware to get free as fast as possible, and should
+be indifferent to whose badge is on it.
 
-**And what being unbuilt is worth.** None of the above costs this project
-anything except a document edit, because nothing is sunk: no mask set, no
-board, no RTL, no inventory, no customer. That is not consolation, it is the
-asset — and the LPCAMM2 reversal on this page is the demonstration. An entire
-memory-system decision inverted, and the blast radius was one table in §1, one
-entry in `decisions.md`, four rows in `system.py` and two in `bom.py`. The
-runtime, the format, the residency manager, the descriptor ring, the AI OS and
-the invariant did not notice, because the memory module sits behind I5 and the
-rest of the design was written to not care what it is.
+**The honest weakness in that position.** If the value moves to the OS layer,
+so does the competition — and it is Microsoft, Apple and Google, who ship
+*with* the hardware and own the defaults. That is a harder fight than
+competing on $/GB/s, not an easier one. `os/`'s answer is structural: a
+model-as-OS with no legacy surface is the thing they cannot ship, because
+their franchise *is* the legacy surface. It is a real argument and an
+unproven one, and G6 is where it gets tested rather than asserted.
 
-The same is true one level up. **Fork B** (no decode block) and **Fork C** (no
-chip at all — the stack on somebody else's board, now including an RTX Spark)
-were in §6 before this announcement, with their conditions written down; a
-result that selects one of them is a route, not a failure. The campaign that
-answers G1–G6 runs on a PC that is already bought (`docs/simulation.md`), and
-its most expensive output is a decision. The one commitment that would be
-ruinous to get wrong — tapeout — is precisely the one this document is
-organised to defer until G1, G2 and G5 have answers.
-
-So the correct response to a competitor shipping the envelope is not to
-re-plan the machine. It is to change what the machine is *for* — width beyond
-256 bits, capacity beyond 128 GB, an operating system nobody else is
-building — and to keep the decisions cheap and the parts behind interfaces
-until the numbers arrive.
+**And what being unbuilt is worth.** None of this costs anything but document
+edits, because nothing is sunk: no mask set, no board, no RTL, no inventory,
+no customer. That is not consolation, it is the asset — and the LPCAMM2
+reversal on this page is the demonstration. An entire memory-system decision
+inverted, and the blast radius was one table, one entry in `decisions.md`,
+four rows in `system.py` and two in `bom.py`. The runtime, the format, the
+residency manager, the descriptor ring and the AI OS did not notice, because
+the memory module sits behind I5 and the rest was written not to care what it
+is. The same discipline is what lets the *whole chip* become optional without
+the plan collapsing: §6 now reads with **Fork C as the base case**, and the
+silicon forks as options that need a market condition none of them currently
+has.
 
 ### YFCE-M — the portable variant
 
@@ -555,6 +564,16 @@ Checked in S9 (injection test set) and S10 (boot chain).
 is a Fork-B product; the NPU, not the decoder, is what it grows, and the
 kernel model's shape (MoE vs dense) is chosen against the NPU in S8/S9.
 
+**D14 — The hardware envelope is assumed to commoditise; the product is the
+software.** Bandwidth, capacity and the mature-node die saving are all
+perishable (§1), and a chip program lands in 2029–30 against a curve that gets
+there first. So residency and the OS are the deliverables, hosts are bought,
+and silicon needs a positive market condition to start rather than a negative
+one to stop. Consequence: Fork C is the base case (§6), S2/S7/S9 are the
+spine (§7), G4 and G6 become the load-bearing gates, and D5's decode-block bar
+is now academic unless something changes. Checked continuously — this is the
+one decision that a market event can reverse, in either direction.
+
 **D12 — Voice is the primary channel; touch and keyboard are a small fixed
 set the runtime owns.** The model cannot add gestures or keys; the screen is
 glanceable and mirrors speech; reactive behaviour is never the model's.
@@ -573,11 +592,23 @@ model cannot lower its own guard. Checked in S9 (injection set incl. audio).
 | **G2** bandwidth ceiling | is a DDR5-5600 (or ≥ LPDDR5-6400) PHY licensable at 28 nm — and an LPDDR5X-8533 PHY at *any* node this project can afford, for YFCE-M? | yes, with area/price in hand | E3 — procurement, §8 |
 | **G3** memory system | does 8ch DDR5 with the DMA pattern achieve ≥ 0.80 of peak? | Ramulator2 ≥ 0.80 incl. refresh and KV traffic | S5 |
 | **G4** system | does one-representation-end-to-end beat convert-and-materialise on the same box? | cold start, swap, footprint by predicted margins; tok/s ratio tracks 1/f | S7 (PC), T1/T2 (board) |
-| **G5** volume | will it ship ≥ NRE crossover units? | business, not engineering | outside this document |
+| **G5** silicon at all | is there a market condition under which a chip beats buying hosts — i.e. ≥ NRE crossover units **and** a durable advantage still standing when parts arrive in 2029–30? | business, not engineering; currently **no** on the second clause (§1) | outside this document |
 | **G6** AI-OS viability | can a model-as-OS carry an ordinary day of PC tasks by voice at these speeds, safely? | S9 task set: ≥ 90% of tasks completed through the model alone, ≥ 80% hands-free; end of utterance → first spoken word p50 ≤ 0.5 s ack / ≤ 1.5 s answer; ≤ 40 tokens per screen update; **zero** unauthorised tool calls under the injection set including audio | S9, S10 |
 
-Forks after G1:
+**G1–G4 and G6 are unchanged by any of the above** — they are questions about
+representation, PHYs, memory systems, residency and the OS, and none of them
+cares who builds the host. Only G5 changed, and it changed from "can we sell
+enough" to "is there any condition at all".
 
+Forks, with the base case first:
+
+- **Fork C — no chip: the base case.** The stack (M1–M3, M11–M13) on hosts
+  somebody else builds, which is where the commodity curve in §1 points. The
+  AI PC becomes a bare-metal runtime on a Spark-class box, a Strix Halo box,
+  an LPCAMM2 laptop or a DIMM server (§8, T1/T2), and gets faster and cheaper
+  every year without a tapeout. Everything in `docs/simulation.md` except
+  S3/S4 serves this fork directly; S2, S7 and S9 *are* this fork. It is
+  selected by default and stays selected unless something below beats it.
 - **Fork A — codec chip.** G1 passes with an entropy-coded family: decode
   block = unpack + entropy stage. Format carries coded planes.
 - **Fork A′ — lattice/VQ chip.** G1 passes with a lattice or codebook family
@@ -592,10 +623,11 @@ Forks after G1:
   the product is a wide socketed-DDR5 board with the right software — and
   with §3, the right software is the whole product. Its competitor is a
   server CPU on the same DIMM topology (§8 T2) at 3–5× the BOM. G5 decides it.
-- **Fork C — no chip.** G2 fails or G5 is out of reach. The software stack
-  (M1–M3, M11–M13) ships on other people's boards; the AI PC becomes a
-  bare-metal runtime on server or Strix Halo hardware (§8, T2). Everything
-  in `docs/simulation.md` except S3/S4 remains useful.
+Forks A, A′ and B are now **options against the base case, not destinations**:
+each needs G1 or G3 to produce something a commodity host cannot buy, *and* a
+G5 answer that survives §1's 2029–30 arithmetic. On today's evidence none of
+them has that, which is a finding, not a failure — it is what the gates were
+built to tell us, and it costs nothing because nothing was built.
 
 ## 7. Phase map
 
@@ -621,6 +653,15 @@ flowchart TD
   STOP --> C["on-chip: C1 MPW test chip — BOM in §8"]
 ```
 
+Under Fork C the campaign has a spine and a periphery. **S2 (format), S7
+(residency, G4) and S9 (the AI OS, G6) are the product** and run regardless of
+every hardware question. S1 stays because bytes-per-token is the half of the
+roofline this project owns on anyone's hardware. S3/S4 (decode RTL and
+synthesis) become research against a chip that currently has no market
+condition — worth doing when there is slack, not worth blocking on. S5 stays
+because a bandwidth machine's memory behaviour has to be understood whoever
+builds it.
+
 | stage | answers | needs from PC | detail |
 |---|---|---|---|
 | S0 | one isolated environment; nothing existing touched | disk ~60 GB | simulation.md §S0 |
@@ -645,9 +686,12 @@ what the next-plans in §8 consume.
 
 ## 8. Beyond the PC — bills of materials and next plans
 
-Not designed here. Prices are August 2026 street prices or quotes seen in
-public sources (listed at the end of this section), and DRAM in particular
-is in a price spike — verify before buying. Where "used" is noted the used
+Not designed here. Under Fork C most of this section stops being a build
+plan and becomes a **shopping list of hosts and measurement rigs** — T1, T2
+and T5 are things to buy and run the stack on, and only T3 and C1 are steps
+toward silicon. Prices are August 2026 street prices or quotes seen in public
+sources (listed at the end of this section), and DRAM in particular is in a
+price spike — verify before buying. Where "used" is noted the used
 market is the realistic route for a solo budget.
 
 ### T1 — E2 on somebody else's 128 GB unified box
@@ -827,7 +871,8 @@ Sources consulted for the prices above (August 2026):
 | The bare-metal runtime grows into an OS | driver surface (USB, network, TLS, codecs) becomes unownable | staged device set; borrowed libraries; seL4-class fallback stated in §3; S10 measures what UEFI must provide |
 | No legacy software | market: a PC that runs nothing existing | positioning as a new category, stated in §3; the network tool renders content, not apps |
 | One-person bandwidth | S3 (RTL) and S9 (runtime) dominate the calendar | S1/S5/S7 run in parallel; S3 scoped to the common path first; S10 optional |
-| **RTX Spark ships this autumn at ~$2,899** | the 128 GB / ~300 GB/s envelope stops being differentiating; the units G5 needs are contested by NVIDIA with six OEMs | §1: what survives is width beyond 256 bits, capacity beyond 128 GB, and the OS — not speed; T1 buys one and measures it |
+| **The envelope commoditises** — RTX Spark now at ~$2,899, and $1,000–1,500 class hardware by ~2028 | every hardware advantage this project could hold is perishable, and a chip program lands after the curve does | D14: the product is residency and the OS, hosts are bought (§6 Fork C); the risk to manage is being *late to the software*, not being beaten on GB/s |
+| The OS layer is contested by the platform owners | Microsoft, Apple and Google ship with the hardware and own the defaults; a better local OS can lose on distribution alone | stated in §1 rather than wished away; `os/`'s structural claim (their franchise is the legacy surface) is tested by G6, not asserted |
 | The 4-module LPCAMM2 configuration is unproven | YFCE-M's 512-bit, 256 GB, 459 GB/s headline is the one number with no shipping precedent | §1 marks it as a signal-integrity question, not a purchase; 2 modules is the fallback and still ships; T5 measures 2, T3-class work is needed for 4 |
 | A portable needs a PHY grade that does not exist at 28 nm | YFCE-M buys a 16/12 nm program: NRE ~$40M → ~$48M, crossover ~87k → ~103k units | C2 asks for LPDDR5X-8533 PHY pricing at 16/12 nm in the same round as the 28 nm DDR5 request |
 | Volume (G5) | decides silicon regardless of everything above, and now against an incumbent with distribution | stated, not solved |

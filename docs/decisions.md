@@ -21,6 +21,37 @@ gap is width. This is the premise the whole design rests on. `model/system.py`
 symbol rate and makes the decode block ~2.6 mm² at 28 nm rather than something
 that competes with the PHY for area. `model/decoder.py`
 
+**The hardware envelope commoditises; the product is the software.**
+2026-08-17, and it follows from this project's own premise rather than from
+anybody's announcement. If bandwidth is bought with pins and not with
+lithography, then no one holds a position on bandwidth — including this
+project. RTX Spark (256-bit, ~300 GB/s, ~$2,899, six OEMs, autumn 2026) is
+the first arrival on that curve, not an exception to it; LPCAMM2 across the
+PC industry, Apple at 512 bits since 2023, and AMD/Qualcomm/MediaTek having
+to answer put **128 GB at 300+ GB/s at $1,000–1,500 around 2028** on the
+conservative side of the forecast.
+
+The arithmetic that settles it: ~40 engineers × 2.5 years, plus the campaign,
+a test chip, bring-up and a respin, is **parts in 2029–30** — a program racing
+a curve that arrives first, on a machine that is mostly DRAM, where the
+mature-node die saving ($5 against ~$150) is a rounding error that shrinks as
+hosts get cheaper. A fourth reason not to tape out, independent of E1, the PHY
+question and volume, and the cleanest of the four.
+
+What is perishable: bandwidth, capacity, width past 256 bits, the die saving.
+What is not: **residency** — one representation from flash to DRAM to the MAC
+units with no conversion, which is a software property that runs on anyone's
+hardware — and **the operating system**. Note what this does to the roofline:
+commoditisation hands `bandwidth` to everyone, and E1 measured only 4.5% of
+headroom in `bytes per token`, so the format's value is residency rather than
+ratio. That makes G4 (S7) load-bearing and G6 (S9) the other half of the
+product.
+
+Consequence: **Fork C is the base case** — the stack on hosts somebody else
+builds — and silicon needs a positive market condition to begin, not a
+negative one to stop. `blueprint.md` §1, D14. *Reversible in either direction
+by a market event; that is why it is written down with its reasons.*
+
 **Bigger NPU is not the answer.** Decode-phase arithmetic intensity is 1–2
 FLOP/byte; the matrix units already idle. TOPS is the wrong figure of merit for
 this machine and should not appear in its specification.
@@ -77,7 +108,7 @@ If nothing above LPDDR4X-4266 is licensable at 28 nm, the bandwidth ceiling
 drops to ~229 GB/s and the compression term stops being optional. Unlike the
 compute-in-memory case, DDR PHYs do *not* prefer mature nodes.
 
-**3. Volume, now against an incumbent.** Amortised NRE crosses the bill of
+**3. Volume — and whether silicon should start at all.** Amortised NRE crosses the bill of
 materials at ~87,000 units (~$40M program against a ~$460 BOM; ~28,000 at
 2026's ~$10/GB DRAM, ~103,000 if a portable forces 16/12 nm). Below that the
 chip's development cost exceeds every physical part in the machine combined,
@@ -85,14 +116,14 @@ and an off-the-shelf board running the same stack is strictly cheaper. This is
 the number that decides whether silicon happens, and no bandwidth result
 changes it.
 
-NVIDIA disclosed **RTX Spark** on 2026-08: 3 nm, 128 GB soldered LPDDR5X at
-~300 GB/s, ~1 PFLOP, ~$2,899, in laptops and desktops from six OEMs this
-autumn. It does not change any number above, and it changes the market for
-them completely: the envelope this design targets is now a shipping consumer
-product, and the units have to be sold against it. What is left to be better
-at — width beyond 256 bits, capacity beyond 128 GB, and an operating system
-nobody else is building — is in `blueprint.md` §1. What is left to be worse
-at is prefill, by 50×.
+Superseded in part by the Settled entry above: the question is no longer
+"can these units be sold against RTX Spark" but "is there any condition under
+which a chip beats buying hosts, given that parts arrive in 2029–30". Until
+one exists, the answer is no and the base case is Fork C. What remains open
+is the *shape* of such a condition — a representation that needs hardware
+nobody sells (G1), a residency result that a general-purpose memory system
+cannot reach (G4), or a volume commitment from someone who wants the OS badly
+enough to fund the silicon under it.
 
 **4. Lane count.** A format parameter with a hardware consequence, fixed before
 tapeout, chosen for the widest bus the family will ever ship. Needs deciding
