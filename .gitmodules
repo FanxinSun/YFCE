@@ -1,0 +1,3 @@
+[submodule "lmz"]
+	path = lmz
+	url = https://github.com/FanxinSun/lmz.git
