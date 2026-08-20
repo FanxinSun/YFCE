@@ -67,6 +67,8 @@ representation instead of coding what someone else's quantiser left behind.
 a desktop CPU against a 229+ GB/s bus — two orders of magnitude short. The
 decode path is hardware or it does not exist. Software compression remains
 correct for the flash→DRAM hop, where it is faster than the storage.
+*Qualified 2026-08-20 — see Reversed. The ruling holds against a DRAM bus and
+fails against a PCIe link, and the difference is measured, not argued.*
 
 **Inheriting phone memory architecture.** 64-bit LPDDR at 68 GB/s is a battery
 decision. Copying it would discard the one advantage a board has.
@@ -92,6 +94,36 @@ Q4_K_M materially (AQLM, QuIP#, imatrix k-quants) buy it with large codebook
 lookups or per-block Hadamard transforms — the exact resource a mature-node
 fixed-function decoder cannot spend. Ratio and cheap-decode are not independent
 axes. See `experiments/e1_representation/RESULTS.md`.
+
+**Why offloading works for training and not for inference: 4000×.**
+2026-08-20. One ratio, measured on this box, and it settles a question that
+kept being argued qualitatively.
+
+Streaming a weight costs `bytes / bandwidth`. The compute it feeds is
+`2 × tokens_per_microbatch` FLOPs per byte, because every token in the
+microbatch reuses the weight. So the traffic hides under the compute once
+`2 × tokens ≥ FLOPS / bandwidth`. On this machine that threshold is
+119e12 / 28.8e9 = **4132 FLOP per byte** (`vram/probe/gemm.cu`,
+`probe/bw.cu`), which is ~2,100 tokens per microbatch — one ordinary sequence.
+
+Inference decode reuses nothing: one multiply-add per parameter per token, so
+**1 FLOP per byte** of BF16 weight. Against the same 4132 it is short by a
+factor of four thousand, and no amount of scheduling recovers it.
+
+Consequences, and they run in opposite directions:
+
+- **For inference**, the only lever is fewer bytes on the link, which is the
+  codec, which delivers 6% on quantised formats. That is why `vram/`'s
+  inference half is a modest result and the interesting part of it is the
+  coded VRAM tier rather than the offload.
+- **For training**, the link essentially does not exist above a normal
+  microbatch, so the codec is secondary and the whole problem is *scheduling*
+  and *optimizer precision*. An 8B full fine-tune is 129 GB of which 112 is
+  Adam; fp32 → 8-bit → bf16 moments is 3.5× off that before any byte moves.
+
+This is also the cleanest statement of why the appliance's decode block was a
+hardware block and a training offloader need not be: they sit at opposite ends
+of the same ratio. `vram/train.py`, `vram/tiers.py`.
 
 ## Open — ordered by how much they can still kill
 
@@ -173,3 +205,62 @@ from ~$40M toward ~$48M (crossover ~87k → ~103k units at pre-spike DRAM).
 3 nm part with 256 bits; the M4 Max is two years older with 512 and 1.8× the
 bandwidth. Four LPCAMM2 modules is 512 bits — 459 GB/s at 8533, 516 at 9600 —
 which is the same argument this project started with, on different parts.
+
+**"A software decoder in the bandwidth path" — reversed on a GPU, and it was
+about the processor, not the bus.** 2026-08-20, revised 2026-08-21. The first
+revision said the ruling was about a particular bus. The second says that was
+wrong too: a software decoder now feeds a DRAM bus **faster than the bus
+delivers raw bytes**, and the thing that changed is what was doing the
+decoding.
+
+The ruling was made against DDR5 at 229–301 GB/s with lmz decoding at
+1.76 GiB/s on a CPU: 100× short, so hardware or nothing. Both terms have since
+moved, and both were measured on the machine this repository lives on.
+
+| | decoder | the bus it feeds | verdict |
+|---|---|---|---|
+| the ruling | lmz on a CPU, 2.2 GB/s | DDR5, 229–301 GB/s | 100× short |
+| GPU decode into VRAM | lmz on an RTX 5080, 399 GB/s | that GPU's VRAM, 887 GB/s read | 0.45× — short |
+| GPU decode **into the matrix unit** | **948 GB/s**, `vram/fused/` | the same 887 GB/s | **1.07× — over** |
+| GPU decode, **link** path | the same 948 GB/s | PCIe into the same GPU, **28.8 GB/s** | **33× spare** |
+
+The standalone figure is lmz's own, byte-identical to its CPU decoder over
+936 MB and 1.87 GB of real planes (`lmz/scratchpad/gpu/`). The fused figure is
+this project's — a decoder producing tensor-core operands in registers, never
+writing a decoded weight to DRAM, verified byte-identical to the checkpoint
+and bit-identical to a raw-weight control (`vram/fused/`). The bus figures are
+`vram/probe/` and that same kernel's control, conditions in
+`vram/MEASURED.md`.
+
+Two things close the third row, and the ordering matters. **Fusing** is worth
+2.1× against the second row: a standalone decoder is also a memory writer, and
+the 268 MB of stores it makes cost more than the decode. **The shape of the
+decode** is worth another 2.05× on top, and it is entirely about how many
+independent rANS states a lane and a warp carry — 8 states per stream is what
+a CPU coder wants and it leaves an SM idle. Neither is a codec change; the
+bytes are lmz's bytes.
+
+So the ruling holds where it was made and nowhere else. **A CPU core cannot
+feed a DRAM bus** — 100× short, and that is why the SoC's decode block was a
+hardware block. An array of 84 SMs can, with 1.4× of the memory system still
+unused. The ruling was read as being about *software* decode; it was about a
+scalar processor, and the correction is that the decode budget on a GPU is the
+SM array. It never applied to the *link* into an accelerator either, which on
+this machine is 31× slower than the DRAM behind it. `vram/` is the project
+that follows from it, and D14 is why it is the base case rather than a
+diversion: it runs on hosts other people build. (`vram/` has since taken
+training as its main line — see the entry below — where this ruling matters
+less, because there the traffic hides under compute rather than needing to be
+made smaller.)
+
+**What this reopens, and it is not small.** E1 rejected designed
+representations partly because the ones that beat Q4_K_M materially — AQLM,
+QuIP#, the IQ lattice family — "buy it with large codebook lookups or
+per-block Hadamard transforms — the exact resource a mature-node fixed-function
+decoder cannot spend." A GPU with 84 SMs and 33× of link headroom **can spend
+it**, and `vram/fused/` shows the spending happens in the same warp as the
+matmul for 1%. The gate is quantified in `vram/tiers.py`: a 3.08× representation over
+Q4-class weights, decodable on a GPU, takes a 70B on a 16 GB card from 1.0
+tok/s to 10.0. Lossless coding delivers 1.05× there, so the question is a
+representation question and it is E1's, asked against a decode budget that is
+not marginally bigger but a different order of thing.

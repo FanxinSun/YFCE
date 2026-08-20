@@ -69,7 +69,8 @@ Design-stage. Three cost and feasibility models, no RTL, no board.
    same machine: cold start, model and expert swap, resident footprint. Since
    the bandwidth term commoditises and E1 measured only 4.5% of headroom in the
    bytes-per-token term, **residency is what the format is worth**, and this is
-   now the load-bearing experiment. `docs/simulation.md` S7.
+   now the load-bearing experiment. `docs/simulation.md` S7, and `vram/` is
+   where it is being built.
 2. Whether a model can be an operating system — carrying an ordinary day of
    work by voice, safely, at these token rates. `os/`, S9.
 3. Whether any market condition justifies silicon before the commodity curve
@@ -85,7 +86,10 @@ Design-stage. Three cost and feasibility models, no RTL, no board.
     docs/build_pdf.py      typesets both into docs/YFCE-blueprint.pdf
     os/                    the AI OS: voice-first, limited touch/keyboard, models control
                            apps and system settings — charter and specs
-    lmz/                   the codec and residency layer (submodule)
+    vram/                  SSD and RAM as VRAM: a runtime for training a model too
+                           large for its GPU, CUDA and Metal — charter, two rooflines,
+                           measured; and the inference half that started it
+    lmz/                   the codec (submodule)
     docs/architecture.md   the design, its invariant, and what it deliberately omits
     docs/decisions.md      settled / ruled out / open, with reasons kept
     model/system.py        roofline: bus width, codec, model -> tokens/sec
@@ -102,7 +106,8 @@ Python 3.10+, no dependencies. Each model runs standalone:
 ## Relationship to lmz
 
 [`lmz`](lmz/) — a git submodule of this repository (`git submodule update
---init` after cloning) — is the codec and the residency layer, not the product. Its
+--init` after cloning) — is the codec, not the product; `vram/` is the
+residency layer that consumes it. Its
 existing block structure — 64 KiB page-aligned blocks, a one-byte read expanding
 one block — is already the structure the hardware DMA path needs, because random
 access imposes the same constraint on a FUSE read and a descriptor ring.
@@ -110,6 +115,40 @@ access imposes the same constraint on a FUSE read and a descriptor ring.
 What lmz does **not** carry over is lossless coding of an existing quantised
 format: that ceiling is 5.1% and it is an entropy bound, not an engineering gap.
 The representation for this system has to be designed as one. See E1.
+
+## Relationship to vram
+
+[`vram/`](vram/) is the residency layer — blueprint M3 — built for hardware
+somebody else made, which under D14 is the base case and not a detour. Its
+main line is a **runtime for training a model too large for the GPU it is
+on**: weights, gradients and optimizer state placed across VRAM, host RAM and
+SSD, with the traffic scheduled to disappear under the compute. CUDA and
+Metal, full fine-tuning rather than adapters.
+
+One measured ratio decides it. Streaming a weight costs `bytes/bandwidth`; the
+compute it feeds is `2 × tokens_per_microbatch` FLOPs per byte. On this box —
+119 TFLOP/s BF16 measured against a 28.8 GB/s PCIe link — that is 4132 FLOP
+per byte, so **~2,100 tokens per microbatch and the link stops existing**.
+Inference decode manages 1 FLOP per byte against the same requirement, short
+by a factor of four thousand. The identical offload is hopeless one side of
+that line and nearly free on the other, which is why the project is about
+training.
+
+And training's memory is not where the appliance's is. An 8B full fine-tune is
+129 GB, of which the weights are 16 and Adam is 112 — so the first lever is
+not offload at all but the optimizer's own precision, 3.5× before a byte
+crosses a bus. That is why it has to be a runtime and not a configuration
+generator.
+
+The honest part: on CUDA, DeepSpeed ZeRO-Infinity already does this well.
+**Off CUDA there is nothing** — a 64 GB Mac can hold a 70B QLoRA today and
+cannot full-fine-tune an 8B, and the arithmetic says it should be able to.
+That gap is what argues for building rather than configuring.
+
+`vram/` also carries the inference half that started it, because it was
+measured: a coded tier inside VRAM, 0.51× the speed of raw weights at 1/ratio
+of the space and 9.3× faster than anything off the card, and one reopened
+ruling in `docs/decisions.md` under Reversed.
 
 ## The honest summary
 

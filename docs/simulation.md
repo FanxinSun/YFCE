@@ -333,6 +333,23 @@ block decoder (S7-b, about a week; it doubles as the fast stimulus
 generator for S3's full-model regression). This is the "coded on flash,
 coded in transit" half of the invariant, measurable here.
 
+**S7-b has since become a project of its own: `vram/`.** The CUDA decoder was
+built in lmz's scratchpad and reached 399–418 GB/s on this card, and the link
+into that card measures 28.8 GB/s — so the decoder has 14× of headroom on the
+path it feeds, and a half-week experiment turned into a residency engine with
+four tiers and a placement solver. `vram/MEASURED.md` carries the conditions
+and `vram/spec/residency.md` restates the four measurements below as what the
+inference side has to prove.
+
+**And then past S7 entirely.** The same tier machinery under *training* is a
+different problem with a much better answer: a training microbatch reuses each
+weight thousands of times, so at ~2,100 tokens the offload hides under the
+compute and the link stops mattering, where decode is short of that by 4000×
+(`decisions.md`, Answered). `vram/` has taken that as its main line — a
+runtime for full fine-tuning a model too large for its GPU, on CUDA and
+Metal — and `vram/README.md` is now its charter. S7 remains what it was: the
+inference measurement, and the baseline the coded tier is scored against.
+
 **Measurements**, each against stock on identical model and hardware:
 
 1. **Cold start** — flash → first token, including the conversion the
@@ -347,6 +364,13 @@ coded in transit" half of the invariant, measurable here.
    token, reported as GB/s decoded against the 5080's ~806 GB/s achievable.
    The expected result is that neither software path tracks 1/f. That is
    the point, and it is what T3-c exists to change.
+
+   *Half wrong, 2026-08-20.* The expectation holds for the CPU, and for the
+   GPU **against VRAM** — 399 GB/s of decode against 776 measured is 0.51×,
+   so a coded tier inside VRAM costs speed and buys capacity. It fails for
+   the GPU **against the link**, where 399 against 28.8 is 14× of headroom
+   and 1/f is tracked exactly. The prediction was made against the wrong
+   bus. `vram/`, and `decisions.md` under Reversed.
 
 **Budget.** 3–4 weeks including S7-b; runs are minutes.
 
