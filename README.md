@@ -88,7 +88,7 @@ Design-stage. Three cost and feasibility models, no RTL, no board.
                            apps and system settings — charter and specs
     vram/                  SSD and RAM as VRAM: a runtime for training a model too
                            large for its GPU, CUDA and Metal — charter, two rooflines,
-                           measured; and the inference half that started it
+                           measured; and the inference half that started it (submodule)
     lmz/                   the codec (submodule)
     docs/architecture.md   the design, its invariant, and what it deliberately omits
     docs/decisions.md      settled / ruled out / open, with reasons kept
@@ -105,9 +105,9 @@ Python 3.10+, no dependencies. Each model runs standalone:
 
 ## Relationship to lmz
 
-[`lmz`](lmz/) — a git submodule of this repository (`git submodule update
---init` after cloning) — is the codec, not the product; `vram/` is the
-residency layer that consumes it. Its
+[`lmz`](lmz/) — one of this repository's two git submodules (`git submodule
+update --init` after cloning brings both) — is the codec, not the product;
+`vram/` is the residency layer that consumes it. Its
 existing block structure — 64 KiB page-aligned blocks, a one-byte read expanding
 one block — is already the structure the hardware DMA path needs, because random
 access imposes the same constraint on a FUSE read and a descriptor ring.
@@ -118,8 +118,9 @@ The representation for this system has to be designed as one. See E1.
 
 ## Relationship to vram
 
-[`vram/`](vram/) is the residency layer — blueprint M3 — built for hardware
-somebody else made, which under D14 is the base case and not a detour. Its
+[`vram/`](vram/) — the other submodule — is the residency layer, blueprint M3,
+built for hardware somebody else made, which under D14 is the base case and
+not a detour. Its
 main line is a **runtime for training a model too large for the GPU it is
 on**: weights, gradients and optimizer state placed across VRAM, host RAM and
 SSD, with the traffic scheduled to disappear under the compute. CUDA and

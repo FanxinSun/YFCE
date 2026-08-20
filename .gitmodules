@@ -1,3 +1,6 @@
 [submodule "lmz"]
 	path = lmz
 	url = https://github.com/FanxinSun/lmz.git
+[submodule "vram"]
+	path = vram
+	url = https://github.com/FanxinSun/vram.git
