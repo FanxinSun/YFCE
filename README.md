@@ -166,3 +166,9 @@ case a representation or a residency result turns up that a commodity host
 cannot reach. Until then the correct move is E2 — prove the architecture in
 software on hardware someone else already built — and it is now the *whole*
 move, not a step toward a tapeout.
+
+## Buy me a coffee
+
+YFCE is free and open source. If the work is useful to you —
+
+### [☕ **Buy me a coffee**](https://buymeacoffee.com/fanxinsun)
