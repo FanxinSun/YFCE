@@ -4,3 +4,6 @@
 [submodule "vram"]
 	path = vram
 	url = https://github.com/FanxinSun/vram.git
+[submodule "cuda4AS"]
+	path = cuda4AS
+	url = https://github.com/FanxinSun/cuda4AS.git
