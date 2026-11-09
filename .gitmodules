@@ -7,3 +7,6 @@
 [submodule "cuda4AS"]
 	path = cuda4AS
 	url = https://github.com/FanxinSun/cuda4AS.git
+[submodule "lmsluice"]
+	path = lmsluice
+	url = https://github.com/FanxinSun/lmsluice.git
